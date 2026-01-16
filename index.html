@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Weather Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/skycons/1396634940/skycons.min.js"></script>
+
+    <style>
+        :root {
+            --glass-bg: rgba(15, 23, 42, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-blue: #38bdf8;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body {
+            background: radial-gradient(circle at top right, #1e293b, #0f172a); 
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        #alert-banner {
+            width: 100%;
+            max-width: 1100px;
+            background: linear-gradient(90deg, #ef4444, #b91c1c);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 24px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .card {
+            padding: 32px;
+        }
+
+        .search-box {
+            display: flex;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 8px 16px;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 10px;
+        }
+
+        .search-box input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 10px;
+            background: transparent;
+            color: white;
+        }
+
+        .unit-toggle-btn {
+            background: var(--accent-blue);
+            color: #0f172a;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        #weather-icon-canvas { display: block; margin: 0 auto; }
+        .weather h1 { font-size: 64px; font-weight: 800; text-align: center; }
+        .weather h2 { font-size: 28px; text-align: center; }
+        
+        /* Local Time Styling */
+        #local-time { text-align: center; color: var(--accent-blue); font-size: 14px; margin-bottom: 10px; font-weight: 500; }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+        }
+        .detail-item { text-align: center; }
+        .detail-item p:first-child { font-size: 11px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 5px; }
+        .detail-item p:last-child { font-weight: 600; font-size: 14px; }
+
+        #map-container {
+            border-radius: 28px;
+            overflow: hidden;
+            height: 650px;
+        }
+
+        .forecast-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .forecast-card {
+            background: rgba(255,255,255,0.03);
+            padding: 12px 8px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid var(--glass-border);
+        }
+
+        .dropdown {
+            background: #1e293b;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border: 1px solid var(--glass-border);
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .dropdown::-webkit-scrollbar { width: 6px; }
+        .dropdown::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
+
+        /* Map controls styling override */
+        .leaflet-control-layers { background: var(--glass-bg) !important; color: white !important; border: 1px solid var(--glass-border) !important; border-radius: 12px !important; }
+
+        @media (max-width: 900px) {
+            .main-container { grid-template-columns: 1fr; }
+            #map-container { height: 350px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="alert-banner"></div>
+
+<div class="main-container">
+    <div class="card">
+        <div class="search-box">
+            <input type="text" id="city-input" placeholder="Search city..." autocomplete="off">
+            <i class="fa-solid fa-magnifying-glass" style="margin-top:12px"></i>
+        </div>
+        <div id="dropdown" class="dropdown"></div>
+
+        <button class="unit-toggle-btn" id="unit-btn">Switch to °F</button>
+
+        <div class="weather">
+            <h2 id="city-display">Dashboard</h2>
+            <p id="local-time"></p> <canvas id="weather-icon-canvas" width="100" height="100"></canvas>
+            <h1 id="temp-display">--°</h1>
+            
+            <div class="details-grid">
+                <div class="detail-item"><p>Feels Like</p><p id="feels-like">--°</p></div>
+                <div class="detail-item"><p>Humidity</p><p id="humidity">--%</p></div>
+                <div class="detail-item"><p>Wind Speed</p><p id="wind-speed">--</p></div>
+                <div class="detail-item"><p>Air Quality</p><p id="aqi-val">--</p></div>
+            </div>
+            
+            <p id="desc-display" style="text-align: center; color: var(--text-dim); margin-top: 15px; text-transform: capitalize;"></p>
+        </div>
+
+        <div class="forecast-container" id="forecast-list"></div>
+    </div>
+
+    <div id="map-container"></div>
+</div>
+
+<script>
+    const apiKey = "697329c3f67da6393814cc780dc99600"; 
+    let units = "metric"; 
+    let currentCoords = null;
+
+    const skycons = new Skycons({"color": "#38bdf8"});
+    skycons.play();
+
+    // Initialize Map
+    let map = L.map('map-container').setView([20, 0], 2);
+    const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    // Weather Radar Layers
+    const rainLayer = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`);
+    const tempLayer = L.tileLayer(`https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${apiKey}`);
+
+    const overlayMaps = {
+        "Rain Radar": rainLayer,
+        "Temperature": tempLayer
+    };
+
+    L.control.layers(null, overlayMaps).addTo(map);
+
+    const cityInput = document.getElementById('city-input');
+    const dropdown = document.getElementById('dropdown');
+    const unitBtn = document.getElementById('unit-btn');
+
+    cityInput.addEventListener('input', async () => {
+        const query = cityInput.value;
+        if (query.length < 3) { dropdown.style.display = 'none'; return; }
+        const res = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${apiKey}`);
+        const cities = await res.json();
+        
+        dropdown.innerHTML = '';
+        cities.forEach(city => {
+            const div = document.createElement('div');
+            div.className = 'suggestion-item';
+            div.style.padding = '10px'; div.style.cursor = 'pointer';
+            div.innerText = `${city.name}, ${city.country}`;
+            div.onclick = () => selectCity(city);
+            dropdown.appendChild(div);
+        });
+        dropdown.style.display = 'block';
+    });
+
+    function selectCity(city) {
+        dropdown.style.display = 'none';
+        cityInput.value = city.name;
+        currentCoords = { lat: city.lat, lon: city.lon };
+        map.flyTo([city.lat, city.lon], 10);
+        updateWeather();
+    }
+
+    async function updateWeather() {
+        if (!currentCoords) return;
+        const { lat, lon } = currentCoords;
+        const tempSymbol = units === "metric" ? "°C" : "°F";
+        const windSymbol = units === "metric" ? "km/h" : "mph";
+
+        const weatherRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`);
+        const data = await weatherRes.json();
+
+        const aqiRes = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${apiKey}`);
+        const aqiData = await aqiRes.json();
+        const aqiLevel = ["N/A", "Good", "Fair", "Moderate", "Poor", "Very Poor"];
+
+        // Update UI
+        document.getElementById('city-display').innerText = data.name;
+        document.getElementById('temp-display').innerText = Math.round(data.main.temp) + tempSymbol;
+        document.getElementById('feels-like').innerText = Math.round(data.main.feels_like) + tempSymbol;
+        document.getElementById('humidity').innerText = data.main.humidity + "%";
+        document.getElementById('wind-speed').innerText = Math.round(data.wind.speed) + " " + windSymbol;
+        document.getElementById('aqi-val').innerText = aqiLevel[aqiData.list[0].main.aqi];
+        document.getElementById('desc-display').innerText = data.weather[0].description;
+
+        // Calculate and Display Local Time
+        const localTimeStr = calculateLocalTime(data.timezone);
+        document.getElementById('local-time').innerText = "Local Time: " + localTimeStr;
+
+        updateIcon(data.weather[0].main);
+        fetchForecast(lat, lon);
+    }
+
+    function calculateLocalTime(timezoneOffset) {
+        const d = new Date();
+        const localTime = d.getTime();
+        const localOffset = d.getTimezoneOffset() * 60000;
+        const utc = localTime + localOffset;
+        const cityTime = utc + (1000 * timezoneOffset);
+        return new Date(cityTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function fetchForecast(lat, lon) {
+        const res = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`);
+        const data = await res.json();
+        const daily = data.list.filter(item => item.dt_txt.includes("12:00:00"));
+        
+        const container = document.getElementById('forecast-list');
+        container.innerHTML = '';
+        daily.forEach(day => {
+            const date = new Date(day.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' });
+            container.innerHTML += `<div class="forecast-card"><p>${date}</p><img src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png"><p>${Math.round(day.main.temp)}°</p></div>`;
+        });
+    }
+
+    unitBtn.addEventListener('click', () => {
+        units = units === "metric" ? "imperial" : "metric";
+        unitBtn.innerText = units === "metric" ? "Switch to °F" : "Switch to °C";
+        updateWeather();
+    });
+
+    function updateIcon(condition) {
+        const iconMap = { "Clear": Skycons.CLEAR_DAY, "Clouds": Skycons.CLOUDY, "Rain": Skycons.RAIN, "Snow": Skycons.SNOW };
+        skycons.set("weather-icon-canvas", iconMap[condition] || Skycons.PARTLY_CLOUDY_DAY);
+    }
+</script>
+</body>
+</html>
