@@ -56,12 +56,12 @@
 
         .search-box {
             display: flex;
-            align-items: center; /* Ensures icons are centered vertically */
             background: rgba(255, 255, 255, 0.03);
             border-radius: 16px;
             padding: 8px 16px;
             border: 1px solid var(--glass-border);
             margin-bottom: 10px;
+            position: relative;
         }
 
         .search-box input {
@@ -71,21 +71,8 @@
             padding: 10px;
             background: transparent;
             color: white;
-            min-width: 0; /* Prevents input from pushing icons out */
-        }
-
-        /* Improved Location Icon Styling */
-        #geo-btn {
-            cursor: pointer;
-            color: var(--accent-blue);
-            font-size: 18px;
-            margin-right: 12px;
-            transition: transform 0.2s, color 0.2s;
-        }
-
-        #geo-btn:hover {
-            transform: scale(1.2);
-            color: #ffffff;
+            position: relative;
+            z-index: 1;
         }
 
         .unit-toggle-btn {
@@ -167,9 +154,9 @@
 <div class="main-container">
     <div class="card">
         <div class="search-box">
-            <i class="fa-solid fa-location-dot" id="geo-btn" title="Use my location"></i>
             <input type="text" id="city-input" placeholder="Search city..." autocomplete="off">
-            <i class="fa-solid fa-magnifying-glass" style="color: var(--text-dim);"></i>
+            <i class="fa-solid fa-location-dot" id="geo-btn" style="margin-top:12px; margin-right: 15px; cursor: pointer; color: var(--accent-blue);" title="Use current location"></i>
+            <i class="fa-solid fa-magnifying-glass" style="margin-top:12px"></i>
         </div>
         <div id="dropdown" class="dropdown"></div>
 
@@ -198,7 +185,7 @@
 </div>
 
 <script>
-    const apiKey = "YOUR_API_KEY_HERE"; 
+    const apiKey = "697329c3f67da6393814cc780dc99600"; 
     let units = "metric"; 
     let currentCoords = null;
 
@@ -310,7 +297,8 @@
         skycons.set("weather-icon-canvas", iconMap[condition] || Skycons.PARTLY_CLOUDY_DAY);
     }
 
-    geoBtn.addEventListener('click', () => {
+    geoBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevents conflict with search input
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
                 currentCoords = {
@@ -320,7 +308,7 @@
                 map.flyTo([currentCoords.lat, currentCoords.lon], 10);
                 updateWeather();
             }, (error) => {
-                alert("Location access denied. Please check your browser settings.");
+                alert("Location access denied.");
             });
         }
     });
