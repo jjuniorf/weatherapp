@@ -56,6 +56,7 @@
 
         .search-box {
             display: flex;
+            align-items: center; /* Ensures icons are centered vertically */
             background: rgba(255, 255, 255, 0.03);
             border-radius: 16px;
             padding: 8px 16px;
@@ -70,6 +71,21 @@
             padding: 10px;
             background: transparent;
             color: white;
+            min-width: 0; /* Prevents input from pushing icons out */
+        }
+
+        /* Improved Location Icon Styling */
+        #geo-btn {
+            cursor: pointer;
+            color: var(--accent-blue);
+            font-size: 18px;
+            margin-right: 12px;
+            transition: transform 0.2s, color 0.2s;
+        }
+
+        #geo-btn:hover {
+            transform: scale(1.2);
+            color: #ffffff;
         }
 
         .unit-toggle-btn {
@@ -151,9 +167,9 @@
 <div class="main-container">
     <div class="card">
         <div class="search-box">
+            <i class="fa-solid fa-location-dot" id="geo-btn" title="Use my location"></i>
             <input type="text" id="city-input" placeholder="Search city..." autocomplete="off">
-            <i class="fa-solid fa-location-crosshairs" id="geo-btn" style="margin-top:12px; margin-right: 10px; cursor: pointer; color: var(--accent-blue);" title="Use my current location"></i>
-            <i class="fa-solid fa-magnifying-glass" style="margin-top:12px"></i>
+            <i class="fa-solid fa-magnifying-glass" style="color: var(--text-dim);"></i>
         </div>
         <div id="dropdown" class="dropdown"></div>
 
@@ -182,7 +198,7 @@
 </div>
 
 <script>
-    const apiKey = "697329c3f67da6393814cc780dc99600"; 
+    const apiKey = "YOUR_API_KEY_HERE"; 
     let units = "metric"; 
     let currentCoords = null;
 
@@ -294,7 +310,6 @@
         skycons.set("weather-icon-canvas", iconMap[condition] || Skycons.PARTLY_CLOUDY_DAY);
     }
 
-    // Handle manual geolocation click
     geoBtn.addEventListener('click', () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
@@ -305,10 +320,8 @@
                 map.flyTo([currentCoords.lat, currentCoords.lon], 10);
                 updateWeather();
             }, (error) => {
-                alert("Please enable location access to use this feature.");
+                alert("Location access denied. Please check your browser settings.");
             });
-        } else {
-            alert("Geolocation is not supported by your browser.");
         }
     });
 </script>
